@@ -1,14 +1,38 @@
-import { motion, useMotionValue, useTransform } from 'motion/react';
+import { motion, useMotionValue, useTransform, animate } from 'motion/react';
 import { Copy } from 'lucide-react';
 
 interface MedalProps {
   onClick?: () => void;
+  onPullReveal?: () => void;
   isFlipped?: boolean;
 }
 
-export function Medal({ onClick, isFlipped = false }: MedalProps) {
+export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) {
+  const giftCode = "C6MG-TVKGMP-YCCB";
   const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [10, -10]);
+  const copyCode = async () => {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(giftCode);
+        return;
+      } catch {}
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = giftCode;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  };
 
   return (
     <div className="relative flex justify-center w-full h-full min-h-[60vh] items-start pt-[20vh] md:pt-[25vh]">
@@ -16,31 +40,51 @@ export function Medal({ onClick, isFlipped = false }: MedalProps) {
       <motion.div
         initial={{ y: "-100vh" }}
         animate={{ y: 0 }}
-        style={{ x, rotate }}
-        drag
-        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-        dragElastic={0.6}
-        whileDrag={{ cursor: "grabbing" }}
-        onClick={onClick}
         transition={{
-          // Separate transitions for different properties
           y: {
             type: "spring",
             stiffness: 40,
             damping: 10,
             mass: 3,
             delay: 0.2
-          },
-          default: {
-            type: "spring",
-            stiffness: 5,   // Even softer spring
-            damping: 0.3,   // Very low damping for long, graceful swings
-            mass: 2,
-            restDelta: 0.001
           }
         }}
-        className="relative flex flex-col items-center cursor-grab active:cursor-grabbing touch-none origin-top"
       >
+        <motion.div
+          animate={{ rotateY: isFlipped ? 180 : 0 }}
+          style={{ x, y, rotate, transformStyle: "preserve-3d" }}
+          drag
+          dragConstraints={{ left: 0, right: 0, top: 0, bottom: 240 }}
+          dragElastic={0.8}
+          dragMomentum={false}
+          whileDrag={{ cursor: "grabbing" }}
+          onClick={onClick}
+          onDragEnd={(_, info) => {
+            if (info.offset.y >= 200) {
+              onPullReveal?.();
+            }
+            animate(y, 0, {
+              type: "spring",
+              stiffness: 180,
+              damping: 12,
+              mass: 0.9
+            });
+          }}
+          transition={{
+            default: {
+              type: "spring",
+              stiffness: 5,   // Even softer spring
+              damping: 0.3,   // Very low damping for long, graceful swings
+              mass: 2,
+              restDelta: 0.001
+            },
+            rotateY: {
+              duration: 0.8,
+              ease: "easeInOut"
+            }
+          }}
+          className="relative flex flex-col items-center cursor-grab active:cursor-grabbing touch-none origin-top"
+        >
         {/* Ribbon - Soft Velvet Texture */}
         <div className="absolute bottom-[calc(100%-8px)] w-16 md:w-20 h-[150vh] bg-gradient-to-b from-rose-900 via-rose-700 to-rose-900 shadow-sm flex justify-center overflow-hidden">
           {/* Silk sheen effect */}
@@ -53,8 +97,7 @@ export function Medal({ onClick, isFlipped = false }: MedalProps) {
         <motion.div
           initial={{ rotate: 0 }}
           animate={{ 
-            rotate: [0, -3, 2, -1, 0],
-            rotateY: isFlipped ? 180 : 0
+            rotate: [0, -3, 2, -1, 0]
           }}
           transition={{
             rotate: {
@@ -62,10 +105,6 @@ export function Medal({ onClick, isFlipped = false }: MedalProps) {
               times: [0, 0.3, 0.6, 0.85, 1],
               ease: "easeInOut",
               delay: 0.8
-            },
-            rotateY: {
-              duration: 0.8,
-              ease: "easeInOut"
             }
           }}
           style={{ transformStyle: "preserve-3d" }}
@@ -181,25 +220,40 @@ export function Medal({ onClick, isFlipped = false }: MedalProps) {
 
               {/* 4. Center Face (Inset) - The Code */}
               <div className="relative w-44 h-44 md:w-56 md:h-56 bg-white rounded-full flex flex-col items-center justify-center shadow-[inset_0_2px_10px_rgba(251,113,133,0.1)] overflow-hidden border-4 border-rose-100 p-5">
-                <div className="flex flex-col items-center justify-center text-center space-y-2 w-full">
-                  <p className="font-sans text-rose-900 text-sm md:text-base font-bold tracking-wide whitespace-nowrap">
-                    Amazon Gift Card
-                  </p>
-                  <div className="w-12 h-0.5 bg-rose-200 rounded-full my-1.5" />
-                  
-                  <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100 max-w-full">
-                    <span className="font-mono text-rose-600 text-[11px] md:text-xs font-bold tracking-[0.25em] leading-tight whitespace-nowrap">
-                      C6MG-TVKGMP-YCCB
+                <div
+                  className="flex flex-col items-center justify-center text-center w-full"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyCode();
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  title="Copy code"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      copyCode();
+                    }
+                  }}
+                >
+                  <div
+                    className="flex items-center justify-center gap-2 max-w-[90%] flex-nowrap cursor-pointer"
+                  >
+                    <span className="font-mono text-rose-600 text-[10px] md:text-[12px] font-bold tracking-[0.1em] leading-tight whitespace-nowrap">
+                      {giftCode}
                     </span>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigator.clipboard.writeText("C6MG-TVKGMP-YCCB");
+                        copyCode();
                       }}
+                      onPointerDown={(e) => e.stopPropagation()}
                       className="p-1 rounded-full hover:bg-rose-100 text-rose-400 hover:text-rose-600 transition-colors"
                       title="Copy code"
                     >
-                      <Copy size={14} />
+                      <Copy size={16} />
                     </button>
                   </div>
                 </div>
@@ -207,6 +261,7 @@ export function Medal({ onClick, isFlipped = false }: MedalProps) {
             </div>
           </div>
         </motion.div>
+      </motion.div>
       </motion.div>
     </div>
   );

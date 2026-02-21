@@ -14,16 +14,22 @@ export default function App() {
   const FLIP_EVERY = 9;
 
   const handleMedalClick = () => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
+    if (isFlipped) {
+      setIsFlipped(false);
+      setClickCount(0);
+      return;
+    }
 
+    const newCount = clickCount + 1;
     if (newCount % FLIP_EVERY === 0) {
-      setIsFlipped(prev => !prev);
+      setIsFlipped(true);
       setClickCount(0); // Reset count so we can flip back after another 9 clicks
       return;
     }
 
-    // Default confetti action for other clicks
+    setClickCount(newCount);
+
+    // Default confetti action for other clicks (front side only)
     const duration = 3000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 50 };
@@ -65,28 +71,46 @@ export default function App() {
       
       <main className="relative z-10 flex-1 w-full flex flex-col items-center">
         <div className="flex-1 w-full">
-          <Medal onClick={handleMedalClick} isFlipped={isFlipped} />
+          <Medal
+            onClick={handleMedalClick}
+            onPullReveal={() => {
+              setIsFlipped(prev => !prev);
+              setClickCount(0);
+            }}
+            isFlipped={isFlipped}
+          />
         </div>
         
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 1 }}
-          className="pb-12 text-center space-y-6 px-4"
+          className="pb-10 -mt-10 text-center space-y-4 px-4"
         >
-          <div className="space-y-2">
-            <p className="font-recoleta font-bold text-rose-900 text-2xl md:text-3xl tracking-wide leading-tight">
-              Until you get your real one,<br/>
-              <span>here's one from me.</span>
-            </p>
-            <p className="font-sansflex text-rose-800/60 font-bold text-sm md:text-base tracking-[0.2em] uppercase pt-2">
-              — Yudha
-            </p>
-          </div>
-
-          <p className="font-sansflex text-xs md:text-sm text-rose-800/60 tracking-wide font-medium">
-            PS: Click on the medal for a surprise
+          <p className="font-recoleta font-bold text-rose-900 text-2xl md:text-3xl tracking-wide leading-tight">
+            {isFlipped ? (
+              <>
+                Here is your Amazon gift card,<br/>
+                <span>from me.</span>
+              </>
+            ) : (
+              <>
+                Until you get your real one,<br/>
+                <span>here's one from me.</span>
+              </>
+            )}
           </p>
+          {!isFlipped ? (
+            <>
+              <p className="font-sansflex text-rose-800/60 font-bold text-sm md:text-base tracking-[0.2em] uppercase pt-1">
+                — Yudha
+              </p>
+
+              <p className="font-sansflex text-xs md:text-sm text-rose-800/60 tracking-wide font-medium">
+                PS: Click on the medal for a surprise
+              </p>
+            </>
+          ) : null}
         </motion.div>
       </main>
     </div>

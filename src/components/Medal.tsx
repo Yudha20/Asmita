@@ -21,6 +21,17 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [10, -10]);
   const copyCode = () => {
+    // Prefer the modern Clipboard API when available
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(giftCode).catch(() => {
+        execCommandFallback();
+      });
+      return;
+    }
+    execCommandFallback();
+  };
+
+  const execCommandFallback = () => {
     const textarea = document.createElement("textarea");
     textarea.value = giftCode;
     textarea.setAttribute("readonly", "");
@@ -28,20 +39,10 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
     textarea.style.top = "-9999px";
     document.body.appendChild(textarea);
     textarea.select();
-    let copied = false;
     try {
-      copied = document.execCommand("copy");
+      document.execCommand("copy");
     } finally {
       document.body.removeChild(textarea);
-    }
-    if (copied) {
-      return;
-    }
-
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(giftCode).catch(() => { });
-    } else {
-      window.prompt("Copy code:", giftCode);
     }
   };
 

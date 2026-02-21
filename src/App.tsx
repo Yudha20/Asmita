@@ -36,7 +36,7 @@ export default function App() {
 
     const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-    const interval: any = setInterval(function() {
+    const interval: any = setInterval(function () {
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
@@ -44,7 +44,7 @@ export default function App() {
       }
 
       const particleCount = 50 * (timeLeft / duration);
-      
+
       // Since particles fall down, start a bit higher than random
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#fb7185', '#fda4af', '#ffe4e6', '#f43f5e'] });
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#fb7185', '#fda4af', '#ffe4e6', '#f43f5e'] });
@@ -53,22 +53,22 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full bg-[#fff1f2] flex flex-col items-center overflow-hidden selection:bg-rose-200 selection:text-rose-900">
-      
+
       {/* Background Pattern - Soft warm glow */}
-      <div className="absolute inset-0" 
-           style={{ 
-             background: 'radial-gradient(circle at 50% 30%, #fff1f2 0%, #ffe4e6 100%)',
-           }} 
+      <div className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(circle at 50% 30%, #fff1f2 0%, #ffe4e6 100%)',
+        }}
       />
 
       {/* Subtle Dotted Pattern */}
-      <div className="absolute inset-0 opacity-[0.25]" 
-           style={{ 
-             backgroundImage: 'radial-gradient(#fb7185 1px, transparent 1px)', 
-             backgroundSize: '24px 24px' 
-           }} 
+      <div className="absolute inset-0 opacity-[0.25]"
+        style={{
+          backgroundImage: 'radial-gradient(#fb7185 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        }}
       />
-      
+
       <main className="relative z-10 flex-1 w-full flex flex-col items-center">
         <div className="flex-1 w-full">
           <Medal
@@ -80,8 +80,8 @@ export default function App() {
             isFlipped={isFlipped}
           />
         </div>
-        
-        <motion.div 
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 1 }}
@@ -90,12 +90,12 @@ export default function App() {
           <p className="font-recoleta font-bold text-rose-900 text-2xl md:text-3xl tracking-wide leading-tight">
             {isFlipped ? (
               <>
-                Here is your Amazon gift card,<br/>
-                <span>from me.</span>
+                Here is an Amazon gift card,<br />
+                <span>for you.</span>
               </>
             ) : (
               <>
-                Until you get your real one,<br/>
+                Until you get your real one,<br />
                 <span>here's one from me.</span>
               </>
             )}
@@ -110,7 +110,11 @@ export default function App() {
                 PS: Click on the medal for a surprise
               </p>
             </>
-          ) : null}
+          ) : (
+            <p className="font-sansflex text-xs md:text-sm text-rose-800/60 tracking-wide font-medium">
+              PS: Click twice to copy the code and return
+            </p>
+          )}
         </motion.div>
       </main>
     </div>

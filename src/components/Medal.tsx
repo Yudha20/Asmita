@@ -1,6 +1,7 @@
 import { motion, useMotionValue, useTransform, animate } from 'motion/react';
 import { Copy } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 
 interface MedalProps {
   onClick?: () => void;
@@ -11,6 +12,11 @@ interface MedalProps {
 export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) {
   const giftCode = "C6MG-TVKGMP-YCCB";
   const [hasCopied, setHasCopied] = useState(false);
+  const [isMotifDragging, setIsMotifDragging] = useState(false);
+  const motifWrapRef = useRef<HTMLDivElement | null>(null);
+  const lastDetentRef = useRef<number | null>(null);
+  const spinControlRef = useRef<ReturnType<typeof animate> | null>(null);
+  const tickAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Reset copy state whenever the medal flips
   useEffect(() => {
@@ -20,6 +26,35 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [10, -10]);
+  const motifRotation = useMotionValue(0);
+
+  useEffect(() => {
+    tickAudioRef.current = new Audio(
+      'data:audio/wav;base64,UklGRlAAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUwAAAAA/////////wAAAAD///8AAP///wAA////AAAAAP///wAAAAD///8AAP///wAA////AAAAAP///wAAAAD///8A'
+    );
+    tickAudioRef.current.volume = 0.2;
+  }, []);
+
+  useEffect(() => {
+    if (isMotifDragging) {
+      spinControlRef.current?.stop();
+      spinControlRef.current = null;
+      return;
+    }
+
+    const current = motifRotation.get();
+    spinControlRef.current?.stop();
+    spinControlRef.current = animate(motifRotation, current + 360, {
+      duration: 60,
+      ease: 'linear',
+      repeat: Infinity,
+    });
+
+    return () => {
+      spinControlRef.current?.stop();
+      spinControlRef.current = null;
+    };
+  }, [isMotifDragging, motifRotation]);
   const copyCode = () => {
     // Prefer the modern Clipboard API when available
     if (navigator.clipboard && window.isSecureContext) {
@@ -43,6 +78,54 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
       document.execCommand("copy");
     } finally {
       document.body.removeChild(textarea);
+    }
+  };
+
+  const handleMotifPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (isFlipped) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    setIsMotifDragging(true);
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  };
+
+  const handleMotifPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsMotifDragging(false);
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+  };
+
+  const handleMotifPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (isFlipped || !isMotifDragging || !motifWrapRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = motifWrapRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const angleRad = Math.atan2(centerY - event.clientY, event.clientX - centerX);
+    const angleDeg = (angleRad * 180) / Math.PI;
+    const normalizedAngle = (angleDeg + 360) % 360;
+    const detent = Math.round(normalizedAngle / 30) % 12;
+    const snappedAngle = detent * 30;
+
+    motifRotation.set(snappedAngle);
+
+    if (detent !== lastDetentRef.current) {
+      lastDetentRef.current = detent;
+      if (navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+      const tick = tickAudioRef.current;
+      if (tick) {
+        tick.currentTime = 0;
+        tick.play().catch(() => {});
+      }
     }
   };
 
@@ -171,7 +254,7 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
 
 
                 {/* 6. Center Face (Inset) */}
-                <div className="relative w-44 h-44 md:w-56 md:h-56 bg-gradient-to-br from-white via-rose-50/50 to-white rounded-full flex flex-col items-center justify-center shadow-[inset_0_2px_12px_rgba(251,113,133,0.15),inset_0_-2px_8px_rgba(251,113,133,0.08)] overflow-hidden border-4 border-rose-100/80">
+                <div className="relative w-44 h-44 md:w-56 md:h-56 bg-[radial-gradient(circle_at_center,#ffffff_0%,#fff1f2_45%,#ffffff_100%)] rounded-full flex flex-col items-center justify-center shadow-[inset_0_0_14px_rgba(251,113,133,0.12)] overflow-hidden border-4 border-rose-100/80">
 
                   {/* Shimmer Effect - One time */}
                   <motion.div
@@ -227,12 +310,13 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                   >
                     {/* Rotating Container */}
                     <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 60,
-                        ease: "linear"
-                      }}
+                      ref={motifWrapRef}
+                      style={{ rotate: motifRotation }}
+                      onPointerDown={handleMotifPointerDown}
+                      onPointerMove={handleMotifPointerMove}
+                      onPointerUp={handleMotifPointerUp}
+                      onPointerCancel={handleMotifPointerUp}
+                      className="touch-none select-none"
                     >
                       {/* Enhanced Floral Gem SVG */}
                       <svg width="140" height="140" viewBox="0 0 100 100" className="w-32 h-32 md:w-44 md:h-44 opacity-90">
@@ -354,7 +438,7 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
 
                 {/* 6. Center Face (Inset) - The Code — entire circle is tappable */}
                 <div
-                  className="relative w-44 h-44 md:w-56 md:h-56 bg-gradient-to-bl from-white via-rose-50/50 to-white rounded-full flex flex-col items-center justify-center shadow-[inset_0_2px_12px_rgba(251,113,133,0.15),inset_0_-2px_8px_rgba(251,113,133,0.08)] overflow-hidden border-4 border-rose-100/80 p-5 cursor-pointer"
+                  className="relative w-44 h-44 md:w-56 md:h-56 bg-[radial-gradient(circle_at_center,#ffffff_0%,#fff1f2_45%,#ffffff_100%)] rounded-full flex flex-col items-center justify-center shadow-[inset_0_0_14px_rgba(251,113,133,0.12)] overflow-hidden border-4 border-rose-100/80 p-5 cursor-pointer"
                   onPointerDownCapture={(e) => e.stopPropagation()}
                   onClickCapture={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}

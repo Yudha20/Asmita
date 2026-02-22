@@ -17,6 +17,10 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const lastDetentRef = useRef<number | null>(null);
   const spinControlRef = useRef<ReturnType<typeof animate> | null>(null);
   const tickAudioRef = useRef<HTMLAudioElement | null>(null);
+  const dragMovedRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const motifPointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const motifMovedRef = useRef(false);
 
   // Reset copy state whenever the medal flips
   useEffect(() => {
@@ -88,13 +92,29 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
     event.preventDefault();
     event.stopPropagation();
     setIsMotifDragging(true);
+    motifMovedRef.current = false;
+    motifPointerStartRef.current = { x: event.clientX, y: event.clientY };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
 
   const handleMotifPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
+    if (motifPointerStartRef.current) {
+      const dx = event.clientX - motifPointerStartRef.current.x;
+      const dy = event.clientY - motifPointerStartRef.current.y;
+      const distance = Math.hypot(dx, dy);
+      const isTap = distance <= 6 && !motifMovedRef.current;
+      if (isTap) {
+        if (navigator.vibrate) {
+          navigator.vibrate(10);
+        }
+        onClick?.();
+      }
+    }
     setIsMotifDragging(false);
+    motifPointerStartRef.current = null;
+    motifMovedRef.current = false;
     (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
   };
 
@@ -111,6 +131,13 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
     const angleRad = Math.atan2(centerY - event.clientY, event.clientX - centerX);
     const angleDeg = (angleRad * 180) / Math.PI;
     const normalizedAngle = (angleDeg + 360) % 360;
+    if (motifPointerStartRef.current) {
+      const dx = event.clientX - motifPointerStartRef.current.x;
+      const dy = event.clientY - motifPointerStartRef.current.y;
+      if (Math.hypot(dx, dy) > 6) {
+        motifMovedRef.current = true;
+      }
+    }
     const detent = Math.round(normalizedAngle / 30) % 12;
     const snappedAngle = detent * 30;
 
@@ -153,7 +180,34 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
           dragElastic={0.8}
           dragMomentum={false}
           whileDrag={{ cursor: "grabbing" }}
-          onTap={onClick}
+          onPointerDown={(event) => {
+            pointerStartRef.current = { x: event.clientX, y: event.clientY };
+            dragMovedRef.current = false;
+          }}
+          onPointerUp={(event) => {
+            if (!pointerStartRef.current) {
+              return;
+            }
+            const dx = event.clientX - pointerStartRef.current.x;
+            const dy = event.clientY - pointerStartRef.current.y;
+            const distance = Math.hypot(dx, dy);
+            const isTap = distance <= 6 && !dragMovedRef.current;
+            pointerStartRef.current = null;
+            if (isTap) {
+              if (navigator.vibrate) {
+                navigator.vibrate(10);
+              }
+              onClick?.();
+            }
+          }}
+          onDragStart={() => {
+            dragMovedRef.current = false;
+          }}
+          onDrag={(_, info) => {
+            if (Math.abs(info.offset.x) + Math.abs(info.offset.y) > 6) {
+              dragMovedRef.current = true;
+            }
+          }}
           onDragEnd={(_, info) => {
             if (info.offset.y >= 240) {
               onPullReveal?.();
@@ -164,6 +218,7 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
               damping: 12,
               mass: 0.9
             });
+            pointerStartRef.current = null;
           }}
           transition={{
             default: {

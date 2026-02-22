@@ -269,38 +269,6 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                     style={{ height: '300%', top: '-100%' }}
                   />
 
-                  {/* Sparkle particles — slow, warm glints */}
-                  {[
-                    { top: '15%', left: '20%', delay: 3, size: 2.5, color: '#fecdd3' },
-                    { top: '70%', left: '76%', delay: 5, size: 2, color: '#fda4af' },
-                    { top: '28%', left: '80%', delay: 7, size: 2, color: '#ffe4e6' },
-                    { top: '78%', left: '22%', delay: 4.5, size: 1.8, color: '#fecdd3' },
-                    { top: '50%', left: '14%', delay: 6, size: 1.5, color: '#fbd5da' },
-                    { top: '42%', left: '84%', delay: 8, size: 1.8, color: '#fda4af' },
-                  ].map((spark, i) => (
-                    <motion.div
-                      key={`sparkle-${i}`}
-                      className="absolute rounded-full"
-                      style={{
-                        top: spark.top,
-                        left: spark.left,
-                        width: spark.size,
-                        height: spark.size,
-                        backgroundColor: spark.color,
-                        boxShadow: `0 0 ${spark.size * 3}px ${spark.size}px ${spark.color}40, 0 -${spark.size * 2}px 0 -${spark.size * 0.3}px ${spark.color}, 0 ${spark.size * 2}px 0 -${spark.size * 0.3}px ${spark.color}, -${spark.size * 2}px 0 0 -${spark.size * 0.3}px ${spark.color}, ${spark.size * 2}px 0 0 -${spark.size * 0.3}px ${spark.color}`,
-                      }}
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: [0, 0.8, 1, 0.8, 0], scale: [0, 1, 1.2, 1, 0] }}
-                      transition={{
-                        duration: 3,
-                        delay: spark.delay,
-                        repeat: Infinity,
-                        repeatDelay: 6 + i * 1.5,
-                        ease: "easeInOut"
-                      }}
-                    />
-                  ))}
-
                   {/* Central Element: Elegant Floral/Gem Motif */}
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}

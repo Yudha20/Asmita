@@ -70,7 +70,7 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
           dragElastic={0.8}
           dragMomentum={false}
           whileDrag={{ cursor: "grabbing" }}
-          onClick={onClick}
+          onTap={onClick}
           onDragEnd={(_, info) => {
             if (info.offset.y >= 240) {
               onPullReveal?.();

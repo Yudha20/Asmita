@@ -21,6 +21,7 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const motifPointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const motifMovedRef = useRef(false);
+  const copyInFlightRef = useRef(false);
 
   // Reset copy state whenever the medal flips
   useEffect(() => {
@@ -52,18 +53,30 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
       spinControlRef.current = null;
     };
   }, [isMotifDragging, motifRotation]);
-  const copyCode = () => {
-    // Prefer the modern Clipboard API when available
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(giftCode).catch((err) => {
-        console.warn("Clipboard API failed", err);
-      });
-      return;
+  const copyCode = async (): Promise<boolean> => {
+    // Start with the synchronous path to keep user-gesture context.
+    try {
+      if (copy(giftCode)) {
+        return true;
+      }
+    } catch (err) {
+      console.warn("copy-to-clipboard failed", err);
     }
-    execCommandFallback();
+
+    // Prefer the modern Clipboard API when available, but fall back on failure.
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(giftCode);
+        return true;
+      } catch (err) {
+        console.warn("Clipboard API failed", err);
+      }
+    }
+
+    return execCommandFallback();
   };
 
-  const execCommandFallback = () => {
+  const execCommandFallback = (): boolean => {
     const textarea = document.createElement("textarea");
     textarea.value = giftCode;
     textarea.setAttribute("readonly", "");
@@ -76,12 +89,41 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
     textarea.setSelectionRange(0, 99999);
 
     try {
-      document.execCommand("copy");
+      return document.execCommand("copy");
     } catch (error) {
       console.error("Fallback copy failed", error);
+      return false;
     } finally {
       document.body.removeChild(textarea);
     }
+  };
+
+  const handleCopyAndReturn = () => {
+    if (hasCopied || copyInFlightRef.current) {
+      return;
+    }
+    copyInFlightRef.current = true;
+
+    void (async () => {
+      const didCopy = await copyCode();
+      if (!didCopy) {
+        copyInFlightRef.current = false;
+        return;
+      }
+
+      setHasCopied(true);
+      if (navigator.vibrate) {
+        navigator.vibrate(20);
+      }
+
+      // Allow the user to see the "COPIED" state and ensure the copy
+      // completes smoothly without focus loss, then trigger flip
+      setTimeout(() => {
+        onClick?.();
+        setHasCopied(false);
+        copyInFlightRef.current = false;
+      }, 400);
+    })();
   };
 
   const handleMotifPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -457,24 +499,12 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                 <div
                   className="relative w-44 h-44 md:w-56 md:h-56 bg-[radial-gradient(circle_at_center,#ffffff_0%,#fff1f2_45%,#ffffff_100%)] rounded-full flex flex-col items-center justify-center shadow-[inset_0_0_14px_rgba(251,113,133,0.12)] overflow-hidden border-4 border-rose-100/80 p-5 cursor-pointer"
                   onPointerDownCapture={(e) => e.stopPropagation()}
+                  onPointerUpCapture={(e) => e.stopPropagation()}
                   onClickCapture={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
+                  onPointerUp={(e) => {
                     e.stopPropagation();
-                    if (!hasCopied) {
-                      copyCode();
-                      setHasCopied(true);
-                      if (navigator.vibrate) {
-                        navigator.vibrate(20);
-                      }
-                    }
-
-                    // Allow the user to see the "COPIED" state and ensure the copy
-                    // completes smoothly without focus loss, then trigger flip
-                    setTimeout(() => {
-                      onClick?.();
-                      setHasCopied(false);
-                    }, 400);
+                    handleCopyAndReturn();
                   }}
                   role="button"
                   tabIndex={0}
@@ -483,17 +513,7 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (!hasCopied) {
-                        copyCode();
-                        setHasCopied(true);
-                        if (navigator.vibrate) {
-                          navigator.vibrate(20);
-                        }
-                      }
-                      setTimeout(() => {
-                        onClick?.();
-                        setHasCopied(false);
-                      }, 400);
+                      handleCopyAndReturn();
                     }
                   }}
                 >

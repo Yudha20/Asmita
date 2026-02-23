@@ -2,6 +2,7 @@ import { motion, useMotionValue, useTransform, animate } from 'motion/react';
 import { Copy, Check } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
+import copy from 'copy-to-clipboard';
 
 interface MedalProps {
   onClick?: () => void;
@@ -466,13 +467,18 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                       if (navigator.vibrate) {
                         navigator.vibrate(20);
                       }
-                    } else {
-                      onClick?.();
                     }
+
+                    // Allow the user to see the "COPIED" state and ensure the copy
+                    // completes smoothly without focus loss, then trigger flip
+                    setTimeout(() => {
+                      onClick?.();
+                      setHasCopied(false);
+                    }, 400);
                   }}
                   role="button"
                   tabIndex={0}
-                  title={hasCopied ? "Click to return" : "Copy code"}
+                  title="Copy code and return"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -483,9 +489,11 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                         if (navigator.vibrate) {
                           navigator.vibrate(20);
                         }
-                      } else {
-                        onClick?.();
                       }
+                      setTimeout(() => {
+                        onClick?.();
+                        setHasCopied(false);
+                      }, 400);
                     }
                   }}
                 >

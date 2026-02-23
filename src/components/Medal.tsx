@@ -22,10 +22,15 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const motifPointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const motifMovedRef = useRef(false);
   const copyInFlightRef = useRef(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset copy state whenever the medal flips
   useEffect(() => {
     setHasCopied(false);
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    }
   }, [isFlipped]);
 
   const x = useMotionValue(0);
@@ -118,10 +123,11 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
 
       // Allow the user to see the "COPIED" state and ensure the copy
       // completes smoothly without focus loss, then trigger flip
-      setTimeout(() => {
+      copyTimeoutRef.current = setTimeout(() => {
         onClick?.();
         setHasCopied(false);
         copyInFlightRef.current = false;
+        copyTimeoutRef.current = null;
       }, 400);
     })();
   };
@@ -193,7 +199,7 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   };
 
   return (
-    <div className="relative flex justify-center w-full h-full min-h-[60vh] items-start pt-[20vh] md:pt-[25vh]">
+    <div className="relative flex justify-center w-full h-full min-h-[52vh] items-start pt-[12vh] md:pt-[20vh]">
       {/* The Hanging Assembly */}
       <motion.div
         initial={{ y: "-100vh" }}
@@ -503,6 +509,17 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                   onClickCapture={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCopyAndReturn();
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCopyAndReturn();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     handleCopyAndReturn();
                   }}

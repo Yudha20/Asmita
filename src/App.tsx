@@ -85,7 +85,7 @@ export default function App() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 1 }}
-          className="pb-10 -mt-10 text-center space-y-4 px-4"
+          className="pb-6 -mt-4 text-center space-y-3 px-4"
         >
           <p className="font-recoleta font-bold text-rose-900 text-2xl md:text-3xl tracking-wide leading-tight">
             {isFlipped ? (

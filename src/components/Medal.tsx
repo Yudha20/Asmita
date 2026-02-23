@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useTransform, animate } from 'motion/react';
-import { Copy } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
@@ -16,7 +16,6 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const motifWrapRef = useRef<HTMLDivElement | null>(null);
   const lastDetentRef = useRef<number | null>(null);
   const spinControlRef = useRef<ReturnType<typeof animate> | null>(null);
-  const tickAudioRef = useRef<HTMLAudioElement | null>(null);
   const dragMovedRef = useRef(false);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const motifPointerStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -31,13 +30,6 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [10, -10]);
   const motifRotation = useMotionValue(0);
-
-  useEffect(() => {
-    tickAudioRef.current = new Audio(
-      'data:audio/wav;base64,UklGRlAAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUwAAAAA/////////wAAAAD///8AAP///wAA////AAAAAP///wAAAAD///8AAP///wAA////AAAAAP///wAAAAD///8A'
-    );
-    tickAudioRef.current.volume = 0.2;
-  }, []);
 
   useEffect(() => {
     if (isMotifDragging) {
@@ -62,8 +54,8 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
   const copyCode = () => {
     // Prefer the modern Clipboard API when available
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(giftCode).catch(() => {
-        execCommandFallback();
+      navigator.clipboard.writeText(giftCode).catch((err) => {
+        console.warn("Clipboard API failed", err);
       });
       return;
     }
@@ -74,12 +66,18 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
     const textarea = document.createElement("textarea");
     textarea.value = giftCode;
     textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.top = "-9999px";
+    textarea.style.position = "absolute";
+    textarea.style.left = "-9999px";
     document.body.appendChild(textarea);
+
+    // Select text specifically for iOS compatibility
     textarea.select();
+    textarea.setSelectionRange(0, 99999);
+
     try {
       document.execCommand("copy");
+    } catch (error) {
+      console.error("Fallback copy failed", error);
     } finally {
       document.body.removeChild(textarea);
     }
@@ -147,11 +145,6 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
       lastDetentRef.current = detent;
       if (navigator.vibrate) {
         navigator.vibrate(10);
-      }
-      const tick = tickAudioRef.current;
-      if (tick) {
-        tick.currentTime = 0;
-        tick.play().catch(() => {});
       }
     }
   };
@@ -470,6 +463,9 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                     if (!hasCopied) {
                       copyCode();
                       setHasCopied(true);
+                      if (navigator.vibrate) {
+                        navigator.vibrate(20);
+                      }
                     } else {
                       onClick?.();
                     }
@@ -484,6 +480,9 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                       if (!hasCopied) {
                         copyCode();
                         setHasCopied(true);
+                        if (navigator.vibrate) {
+                          navigator.vibrate(20);
+                        }
                       } else {
                         onClick?.();
                       }
@@ -494,11 +493,11 @@ export function Medal({ onClick, onPullReveal, isFlipped = false }: MedalProps) 
                     <div
                       className="flex items-center justify-center gap-3 max-w-[95%] flex-nowrap"
                     >
-                      <span className="font-mono text-rose-600 text-[10px] md:text-[12px] font-bold tracking-[0.1em] leading-tight whitespace-nowrap">
-                        {giftCode}
+                      <span className="font-mono text-rose-600 text-[12px] md:text-[14px] font-bold tracking-[0.1em] leading-tight whitespace-nowrap">
+                        {hasCopied ? "COPIED!" : giftCode}
                       </span>
                       <span className="text-rose-500">
-                        <Copy size={16} />
+                        {hasCopied ? <Check size={18} /> : <Copy size={16} />}
                       </span>
                     </div>
                   </div>
